@@ -1,12 +1,12 @@
 use std::collections::HashMap;
-use std::{io, fmt::Error};
-use std::error;
+use std::io;
+//use std::error;
 
 struct Resistor {
     first_digit: Option<u8>,
     sec_digit: Option<u8>,
     third_digit: Option<u8>,
-    mult: Option<u8>,
+    mult: Option<u32>,
     tolerance: Option<f32>,
 }
 
@@ -38,18 +38,20 @@ fn colors_to_values(input: String) -> Result<Resistor, &'static str> {
         Err(error) => return Err(error),
 
     }
-    
 
     let mut output = Resistor {
         first_digit: Some(v[0]),
         sec_digit: Some(v[1]),
         third_digit: if v.len() > 4 { Some(v[2])} else {None},
-        mult:  if v.len() > 4 { Some(v[3])} else {None},
+        mult:  if v.len() > 4 { Some(v[3] as u32)} else {Some(v[2] as u32)},
         tolerance: if v.len() > 4 { Some(v[4] as f32)} else {None},
     };
     output.mult = match output.mult {
         None => Some(0),
-        Some(m) => Some(10_u8.checked_pow(m as u32).unwrap()),
+        Some(m) => Some(
+                    10_u32
+                    .checked_pow(m as u32)
+                    .expect("overflow")),
     };
     output.tolerance = color_to_tolerance(output.tolerance);
     Ok(output)
@@ -87,17 +89,26 @@ fn calc_resistor(i: Resistor) -> String {
     values.insert("mult", i.mult.unwrap_or(0) as f64);
     values.insert("tolerance", i.tolerance.unwrap_or(0.0_f32) as f64);
 
-    let r= (
-        values.get("first_digit").unwrap()
-        +
-        values.get("sec_digit").unwrap()
-        / 10_f64 +
-        values.get("third_digit").unwrap()
-        / 100_f64) *
-        values.get("mult").unwrap();
-
+    let r:f64;
+    if None == i.third_digit {
+        r= (
+            values.get("first_digit").unwrap() *10_f64
+            +
+            values.get("sec_digit").unwrap() *1_f64
+            ) *
+            values.get("mult").unwrap();
+    } else {
+        r= (
+            values.get("first_digit").unwrap() *100_f64
+            +
+            values.get("sec_digit").unwrap() *10_f64
+            +
+            values.get("third_digit").unwrap() *1_f64
+            ) *
+            values.get("mult").unwrap();
+    }
     //let r = format_resistor(r);
-    let s:String = format!("{:.3}Ohms +/-{}", r, values.get("tolerance").unwrap());
+    let s:String = format!("{:.3}Ohms +/-{}%", r, values.get("tolerance").unwrap());
     s            
 }
 /*
