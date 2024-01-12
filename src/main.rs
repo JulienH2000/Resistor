@@ -115,8 +115,6 @@ fn calc_resistor(i: Resistor) -> String {
             ) *
             values.get("mult").unwrap_or(&1_f64);
     }
-    println!("{}", r);
-    println!("{}", i.tolerance.unwrap());
     
     let result = match format_resistor(r) {
         Ok(r) => r,
@@ -155,6 +153,7 @@ fn exit_check(i:&str) -> Result<bool, &'static str> {
 }
 
 fn main() {
+    banner();
     println!("This software converts your resistor color code in Ohms,\nUse english colors, with spaces. This is case insensitive.\nType \"exit\" to quit");
 
     'input: loop {
@@ -182,5 +181,16 @@ fn main() {
         }
     
     }
+
+}
+
+fn banner() {
+    println!("
+    ██████╗ ███████╗███████╗██╗███████╗████████╗ ██████╗ ██████╗ 
+    ██╔══██╗██╔════╝██╔════╝██║██╔════╝╚══██╔══╝██╔═══██╗██╔══██╗
+    ██████╔╝█████╗  ███████╗██║███████╗   ██║   ██║   ██║██████╔╝
+    ██╔══██╗██╔══╝  ╚════██║██║╚════██║   ██║   ██║   ██║██╔══██╗
+    ██║  ██║███████╗███████║██║███████║   ██║   ╚██████╔╝██║  ██║
+    ╚═╝  ╚═╝╚══════╝╚══════╝╚═╝╚══════╝   ╚═╝    ╚═════╝ ╚═╝  ╚═╝");
 
 }
