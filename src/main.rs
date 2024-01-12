@@ -61,8 +61,8 @@ fn color_to_tolerance(i:Option<f32>) -> Option<f32> {
     let t = match i {
         None => None,
         Some(c) => Some(match c as i32 {
-            2 => 1.0,
-            3 => 2.0,
+            1 => 1.0,
+            2 => 2.0,
             5 => 0.5,
             6 => 0.25,
             7 => 0.1,
@@ -108,7 +108,7 @@ fn calc_resistor(i: Resistor) -> String {
             values.get("mult").unwrap();
     }
     //let r = format_resistor(r);
-    let s:String = format!("{:.3}Ohms +/-{}%", r, values.get("tolerance").unwrap());
+    let s:String = format!("{:.1} Ohms +/-{}%", r, values.get("tolerance").unwrap());
     s            
 }
 /*
