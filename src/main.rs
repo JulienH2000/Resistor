@@ -16,7 +16,7 @@ fn colors_to_values(input: String) -> Result<Resistor, &'static str> {
     match split_vec{
         Ok(color) => 
         if color.len() < 4 {
-            return Err("Not 4/5 rings color sequence");
+            return Err("Not 4/5 rings color sequence !!");
         } else {
         for i in 0..=color.len()-1 {
             match color[i].to_lowercase().as_str() {
@@ -32,7 +32,7 @@ fn colors_to_values(input: String) -> Result<Resistor, &'static str> {
                 "white" => v.push(9),
                 "gold" => v.push(10),
                 "silver" => v.push(11),
-                _ => return Err("Invalid color"),
+                _ => return Err("Invalid color !!"),
             }
         }},
         Err(error) => return Err(error),
@@ -107,21 +107,36 @@ fn calc_resistor(i: Resistor) -> String {
             ) *
             values.get("mult").unwrap();
     }
-    //let r = format_resistor(r);
-    let s:String = format!("{:.1} Ohms +/-{}%", r, values.get("tolerance").unwrap());
+    let result = match format_resistor(r) {
+        Ok(r) => r,
+        Err(_) => panic!("formatting failed !!")
+    };
+    let s:String = format!("{:.1} {} +/-{}%", result.0, result.1, values.get("tolerance").unwrap());
     s            
 }
-/*
-fn format_resistor(r: f32) -> (f32, char) {
-    let r = r
-} */
+
+fn format_resistor(r: f64) -> Result<(f64, String), &'static str> {
+    let output:(f64, String);
+    let rounded = r as i32;
+    let len = rounded.to_string();
+    if len.len() < 3 {
+        output = (r, String::from("Ohms"));
+    } else if len.len() < 6 {
+        output = (r/100_f64, String::from("kOhms"));
+    } else if len.len() < 9 {
+        output = (r/100000_f64, String::from("MOhms"));
+    } else {
+        output = (r, String::from("Ohms"));
+    }
+    Ok(output)
+}
 
 fn exit_check(i:&str) -> Result<bool, &'static str> {
     let split_vec: Vec<&str> = i.split_whitespace().collect();
     if split_vec.len() > 1 {
         return Ok(false);
     } else {
-        match split_vec[0] {
+        match split_vec[0].to_lowercase().as_str() {
             "exit" => return Ok(true),
             _ => return Ok(false),
         }
@@ -129,28 +144,31 @@ fn exit_check(i:&str) -> Result<bool, &'static str> {
 }
 
 fn main() {
+    println!("This software converts your resistor color code in Ohms,\nUse english colors, with spaces. This is case insensitive.\nType \"exit\" to quit");
 
     'input: loop {
-    let mut user_input = String::new();
-    io::stdin()
-        .read_line(&mut user_input)
-        .expect("failed");
-
-    match exit_check(&user_input) {
-        Ok(b) =>
-            if b == true {
-                break 'input;
-            },
-        Err(e) => panic!("{}",e),
-    }
     
-    let resistor = colors_to_values(user_input);
-    match resistor {
-        Ok(r) => println!("{}", calc_resistor(r)),
-        Err(e) => {
-            println!("{}", e);
-            continue},
-    }
+        println!("Input your colors :");
+        let mut user_input = String::new();
+        io::stdin()
+            .read_line(&mut user_input)
+            .expect("failed");
+
+        match exit_check(&user_input) {
+            Ok(b) =>
+                if b == true {
+                    break 'input;
+                },
+            Err(e) => panic!("{}",e),
+        }
+    
+        let resistor = colors_to_values(user_input);
+        match resistor {
+            Ok(r) => println!("{}", calc_resistor(r)),
+            Err(e) => {
+                println!("{}", e);
+                continue},
+        }
     
     }
 
