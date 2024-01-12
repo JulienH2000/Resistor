@@ -116,16 +116,35 @@ fn format_resistor(r: f32) -> (f32, char) {
     let r = r
 } */
 
+fn exit_check(i:&str) -> Result<bool, &'static str> {
+    let split_vec: Vec<&str> = i.split_whitespace().collect();
+    if split_vec.len() > 1 {
+        return Ok(false);
+    } else {
+        match split_vec[0] {
+            "exit" => return Ok(true),
+            _ => return Ok(false),
+        }
+    }
+}
+
 fn main() {
 
-    loop {
+    'input: loop {
     let mut user_input = String::new();
     io::stdin()
         .read_line(&mut user_input)
         .expect("failed");
 
-    let resistor = colors_to_values(user_input);
+    match exit_check(&user_input) {
+        Ok(b) =>
+            if b == true {
+                break 'input;
+            },
+        Err(e) => panic!("{}",e),
+    }
     
+    let resistor = colors_to_values(user_input);
     match resistor {
         Ok(r) => println!("{}", calc_resistor(r)),
         Err(e) => {
