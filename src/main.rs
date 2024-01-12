@@ -6,7 +6,7 @@ struct Resistor {
     first_digit: Option<u8>,
     sec_digit: Option<u8>,
     third_digit: Option<u8>,
-    mult: Option<u32>,
+    mult: Option<f32>,
     tolerance: Option<f32>,
 }
 
@@ -43,15 +43,23 @@ fn colors_to_values(input: String) -> Result<Resistor, &'static str> {
         first_digit: Some(v[0]),
         sec_digit: Some(v[1]),
         third_digit: if v.len() > 4 { Some(v[2])} else {None},
-        mult:  if v.len() > 4 { Some(v[3] as u32)} else {Some(v[2] as u32)},
-        tolerance: if v.len() > 4 { Some(v[4] as f32)} else {None},
+        mult:  if v.len() > 4 { Some(v[3] as f32)} else {Some(v[2] as f32)},
+        tolerance: if v.len() > 4 { Some(v[4] as f32)} else {Some(v[3] as f32)},
     };
     output.mult = match output.mult {
-        None => Some(0),
-        Some(m) => Some(
-                    10_u32
+        None => None,
+        Some(m) => if m <= 7_f32{
+                    Some(
+                    (10_u32
                     .checked_pow(m as u32)
-                    .expect("overflow")),
+                    .expect("overflow")) as f32)
+                } else if m == 10_f32 {
+                    Some(0.1)
+                } else if m == 11_f32 {
+                    Some(0.01)
+                } else {
+                    None
+                },
     };
     output.tolerance = color_to_tolerance(output.tolerance);
     Ok(output)
@@ -86,7 +94,7 @@ fn calc_resistor(i: Resistor) -> String {
     values.insert("first_digit", i.first_digit.unwrap_or(0) as f64);
     values.insert("sec_digit", i.sec_digit.unwrap_or(0) as f64);
     values.insert("third_digit", i.third_digit.unwrap_or(0) as f64);
-    values.insert("mult", i.mult.unwrap_or(0) as f64);
+    values.insert("mult", i.mult.unwrap_or(0_f32) as f64);
     values.insert("tolerance", i.tolerance.unwrap_or(0.0_f32) as f64);
 
     let r:f64;
@@ -105,8 +113,11 @@ fn calc_resistor(i: Resistor) -> String {
             +
             values.get("third_digit").unwrap() *1_f64
             ) *
-            values.get("mult").unwrap();
+            values.get("mult").unwrap_or(&1_f64);
     }
+    println!("{}", r);
+    println!("{}", i.tolerance.unwrap());
+    
     let result = match format_resistor(r) {
         Ok(r) => r,
         Err(_) => panic!("formatting failed !!")
@@ -119,11 +130,11 @@ fn format_resistor(r: f64) -> Result<(f64, String), &'static str> {
     let output:(f64, String);
     let rounded = r as i32;
     let len = rounded.to_string();
-    if len.len() < 3 {
+    if len.len() <= 3 {
         output = (r, String::from("Ohms"));
-    } else if len.len() < 6 {
-        output = (r/100_f64, String::from("kOhms"));
-    } else if len.len() < 9 {
+    } else if len.len() <= 6 {
+        output = (r/1000_f64, String::from("kOhms"));
+    } else if len.len() <= 9 {
         output = (r/100000_f64, String::from("MOhms"));
     } else {
         output = (r, String::from("Ohms"));
@@ -148,7 +159,7 @@ fn main() {
 
     'input: loop {
     
-        println!("Input your colors :");
+        println!("Input your colors or exit:");
         let mut user_input = String::new();
         io::stdin()
             .read_line(&mut user_input)
