@@ -1,12 +1,13 @@
+use std::collections::HashMap;
 use std::{io, fmt::Error};
 use std::error;
 
 struct Resistor {
-    first_digit: u8,
-    sec_digit: u8,
-    third_digit: u8,
-    mult: u8,
-    tolerance: f32,
+    first_digit: Option<u8>,
+    sec_digit: Option<u8>,
+    third_digit: Option<u8>,
+    mult: Option<u8>,
+    tolerance: Option<f32>,
 }
 
 fn colors_to_values(input: String) -> Result<Resistor, &'static str> {
@@ -15,7 +16,7 @@ fn colors_to_values(input: String) -> Result<Resistor, &'static str> {
     match split_vec{
         Ok(color) => 
         if color.len() < 4 {
-            return Err("Not 4/5 ring color sequence");
+            return Err("Not 4/5 rings color sequence");
         } else {
         for i in 0..=color.len()-1 {
             match color[i].to_lowercase().as_str() {
@@ -40,39 +41,63 @@ fn colors_to_values(input: String) -> Result<Resistor, &'static str> {
     
 
     let mut output = Resistor {
-        first_digit: v[0],
-        sec_digit: v[1],
-        third_digit: if v.len() > 4 { v[2]} else {0},
-        mult:  if v.len() > 4 { v[3]} else {v[2]},
-        tolerance: if v.len() > 4 { v[4] as f32} else {v[3] as f32},
+        first_digit: Some(v[0]),
+        sec_digit: Some(v[1]),
+        third_digit: if v.len() > 4 { Some(v[2])} else {None},
+        mult:  if v.len() > 4 { Some(v[3])} else {None},
+        tolerance: if v.len() > 4 { Some(v[4] as f32)} else {None},
     };
-    output.mult = 10_u8.pow(output.mult as u32);
+    output.mult = match output.mult {
+        None => Some(0),
+        Some(m) => Some(10_u8.checked_pow(m as u32).unwrap()),
+    };
     output.tolerance = color_to_tolerance(output.tolerance);
     Ok(output)
 }
 
-fn color_to_tolerance(i:f32) -> f32 {
+fn color_to_tolerance(i:Option<f32>) -> Option<f32> {
     let t = match i {
-        2_f32 => 1.0,
-        3_f32 => 2.0,
-        5_f32 => 0.5,
-        6_f32 => 0.25,
-        7_f32 => 0.1,
-        _ => 0.0,
+        None => None,
+        Some(c) => Some(match c as i32 {
+            2 => 1.0,
+            3 => 2.0,
+            5 => 0.5,
+            6 => 0.25,
+            7 => 0.1,
+            10 => 5_f32,
+            11 => 10_f32,
+            _ => 0.0,
+        },)
     };
     t
 }
 
 fn calc_resistor(i: Resistor) -> String {
-    let r= (i.first_digit as f64
+    /*let r= (i.first_digit as f64
             +
             i.sec_digit as f64
             / 10. +
             i.third_digit as f64
             / 100.) *
-            i.mult as f64;
+            i.mult as f64;*/
+    let mut values= HashMap::new();
+    values.insert("first_digit", i.first_digit.unwrap_or(0) as f64);
+    values.insert("sec_digit", i.sec_digit.unwrap_or(0) as f64);
+    values.insert("third_digit", i.third_digit.unwrap_or(0) as f64);
+    values.insert("mult", i.mult.unwrap_or(0) as f64);
+    values.insert("tolerance", i.tolerance.unwrap_or(0.0_f32) as f64);
+
+    let r= (
+        values.get("first_digit").unwrap()
+        +
+        values.get("sec_digit").unwrap()
+        / 10_f64 +
+        values.get("third_digit").unwrap()
+        / 100_f64) *
+        values.get("mult").unwrap();
+
     //let r = format_resistor(r);
-    let s:String = format!("{:.3}Ohms +/-{}", r, i.tolerance);
+    let s:String = format!("{:.3}Ohms +/-{}", r, values.get("tolerance").unwrap());
     s            
 }
 /*
