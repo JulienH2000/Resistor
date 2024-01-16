@@ -84,33 +84,55 @@ impl Colors {
     }
 
     pub fn to_values (&self) -> Result<Resistor, &'static str>{
-        let output = Resistor { first_digit: None, sec_digit: None, third_digit: None, mult: None, tolerance: None};
-        for i in 0..self.as_array().len() {
-            match self.as_array()[i] {
-                Some(v) => match v.to_lowercase().as_str() {
-                                "black" => output.as_array()[i] = &Some(0_f32),
-                                "brown" => output.as_array()[i] = &Some(1_f32),
-                                "red" => output.as_array()[i] = &Some(2_f32),
-                                "orange" => output.as_array()[i] = &Some(3_f32),
-                                "yellow" => output.as_array()[i]  = &Some(4_f32),
-                                "green" => output.as_array()[i] = &Some(5_f32),
-                                "blue" => output.as_array()[i] = &Some(6_f32),
-                                "violet" => output.as_array()[i] = &Some(7_f32),
-                                "grey" => output.as_array()[i] = &Some(8_f32),
-                                "white" => output.as_array()[i] = &Some(9_f32),
-                                "gold" => output.as_array()[i] = &Some(10_f32),
-                                "silver" => output.as_array()[i] = &Some(11_f32),
-                                _ => return Err("Invalid color !!"),
-                },
-                None => return Err("Invalid Colors Struct !!"),
-            }
-        }
+        let output = Resistor { 
+            first_digit: match color_to_values(&self.first_color) {
+                Ok(v) => Some(v),
+                Err(_) => None,
+            }, 
+            sec_digit: match color_to_values(&self.sec_color) {
+                Ok(v) => Some(v),
+                Err(_) => None,
+            },  
+            third_digit: match color_to_values(&self.third_color) {
+                Ok(v) => Some(v),
+                Err(_) => None,
+            }, 
+            mult: match color_to_values(&self.mult) {
+                Ok(v) => Some(v),
+                Err(_) => None,
+            }, 
+            tolerance: match color_to_values(&self.tolerance) {
+                Ok(v) => Some(v),
+                Err(_) => None,
+            }, };
+        
         println!("{:?}", output.as_array());
         Ok(output)
-
+        
         
     }
 }
+
+fn color_to_values(i:&Option<String>) -> Result<f32, &str> {
+    match i {
+       Some(v) => match v.to_lowercase().as_str() {
+            "black" => Ok(0_f32),
+            "brown" => Ok(1_f32),
+            "red" => Ok(2_f32),
+            "orange" => Ok(3_f32),
+            "yellow" => Ok(4_f32),
+            "green" => Ok(5_f32),
+            "blue" => Ok(6_f32),
+            "violet" => Ok(7_f32),
+            "grey" => Ok(8_f32),
+            "white" => Ok(9_f32),
+            "gold" => Ok(10_f32),
+            "silver" => Ok(11_f32),
+            _ => return Err("Invalid color !!"),
+            }
+        None => Err("Empty Color !!"),
+    }
+} 
 
 
 fn string_to_color (input: String) -> Result<Colors, &'static str> {
