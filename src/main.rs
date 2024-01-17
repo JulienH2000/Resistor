@@ -1,99 +1,168 @@
 use std::collections::HashMap;
 use std::io;
-//use std::error;
+use std::fmt::Error;
 
 struct Resistor {
-    first_digit: Option<u8>,
-    sec_digit: Option<u8>,
-    third_digit: Option<u8>,
+    first_digit: Option<f32>,
+    sec_digit: Option<f32>,
+    third_digit: Option<f32>,
     mult: Option<f32>,
     tolerance: Option<f32>,
 }
 
-fn colors_to_values(input: String) -> Result<Resistor, &'static str> {
-    let split_vec: Result<Vec<&str>, &str> = input.split_whitespace().map(Ok).collect();
-    let mut v: Vec<u8> = Vec::new();
-    match split_vec{
-        Ok(color) => 
-        if color.len() < 4 {
-            return Err("Not 4/5 rings color sequence !!");
-        } else {
-        for i in 0..=color.len()-1 {
-            match color[i].to_lowercase().as_str() {
-                "black" => v.push(0),
-                "brown" => v.push(1),
-                "red" => v.push(2),
-                "orange" => v.push(3),
-                "yellow" => v.push(4),
-                "green" => v.push(5),
-                "blue" => v.push(6),
-                "violet" => v.push(7),
-                "grey" => v.push(8),
-                "white" => v.push(9),
-                "gold" => v.push(10),
-                "silver" => v.push(11),
-                _ => return Err("Invalid color !!"),
-            }
-        }},
-        Err(error) => return Err(error),
-
+impl Resistor {
+    fn as_array (&self) -> [&Option<f32>; 5] {
+        [&self.first_digit,
+        &self.sec_digit,
+        &self.third_digit,
+        &self.mult,
+        &self.tolerance]
     }
 
-    let mut output = Resistor {
-        first_digit: Some(v[0]),
-        sec_digit: Some(v[1]),
-        third_digit: if v.len() > 4 { Some(v[2])} else {None},
-        mult:  if v.len() > 4 { Some(v[3] as f32)} else {Some(v[2] as f32)},
-        tolerance: if v.len() > 4 { Some(v[4] as f32)} else {Some(v[3] as f32)},
-    };
-    output.mult = match output.mult {
-        None => None,
-        Some(m) => if m <= 7_f32{
-                    Some(
-                    (10_u32
-                    .checked_pow(m as u32)
-                    .expect("overflow")) as f32)
-                } else if m == 10_f32 {
-                    Some(0.1)
-                } else if m == 11_f32 {
-                    Some(0.01)
-                } else {
-                    None
-                },
-    };
-    output.tolerance = color_to_tolerance(output.tolerance);
-    Ok(output)
+    fn set_mult (self) -> Result<Resistor, &'static str> {
+        let m = match self.mult {
+            None => None,
+            Some(m) => if m <= 7_f32{
+                        Some(
+                        (10_u32
+                        .checked_pow(m as u32)
+                        .expect("overflow")) as f32)
+                    } else if m == 10_f32 {
+                        Some(0.1)
+                    } else if m == 11_f32 {
+                        Some(0.01)
+                    } else {
+                        None
+                    },
+        };
+
+        Ok(Resistor {
+            mult: m,
+            ..self          
+            }
+        )
+    }
+
+    fn set_tolerance (self) -> Result<Resistor, &'static str> {
+        let t = match self.tolerance {
+            None => None,
+            Some(c) => Some(match c as i32 {
+                1 => 1.0,
+                2 => 2.0,
+                5 => 0.5,
+                6 => 0.25,
+                7 => 0.1,
+                10 => 5_f32,
+                11 => 10_f32,
+                _ => 0.0,
+            },)
+        };
+        Ok(Resistor {
+            tolerance: t,
+            ..self          
+            }
+        )
+
+    }
 }
 
-fn color_to_tolerance(i:Option<f32>) -> Option<f32> {
-    let t = match i {
-        None => None,
-        Some(c) => Some(match c as i32 {
-            1 => 1.0,
-            2 => 2.0,
-            5 => 0.5,
-            6 => 0.25,
-            7 => 0.1,
-            10 => 5_f32,
-            11 => 10_f32,
-            _ => 0.0,
-        },)
-    };
-    t
+struct Colors {
+    first_color: Option<String>,
+    sec_color: Option<String>,
+    third_color: Option<String>,
+    mult: Option<String>,
+    tolerance: Option<String>,
+}
+
+impl Colors {
+    fn as_array (&self) -> [&Option<String>; 5] {
+        [&self.first_color,
+        &self.sec_color,
+        &self.third_color,
+        &self.mult,
+        &self.tolerance]
+    }
+
+    pub fn to_values (&self) -> Result<Resistor, &'static str>{
+        let output = Resistor { 
+            first_digit: match color_to_values(&self.first_color) {
+                Ok(v) => Some(v),
+                Err(_) => None,
+            }, 
+            sec_digit: match color_to_values(&self.sec_color) {
+                Ok(v) => Some(v),
+                Err(_) => None,
+            },  
+            third_digit: match color_to_values(&self.third_color) {
+                Ok(v) => Some(v),
+                Err(_) => None,
+            }, 
+            mult: match color_to_values(&self.mult) {
+                Ok(v) => Some(v),
+                Err(_) => None,
+            }, 
+            tolerance: match color_to_values(&self.tolerance) {
+                Ok(v) => Some(v),
+                Err(_) => None,
+            }, };
+        
+        Ok(output)
+        
+        
+    }
+}
+
+fn color_to_values(i:&Option<String>) -> Result<f32, &str> {
+    match i {
+       Some(v) => match v.to_lowercase().as_str() {
+            "black" => Ok(0_f32),
+            "brown" => Ok(1_f32),
+            "red" => Ok(2_f32),
+            "orange" => Ok(3_f32),
+            "yellow" => Ok(4_f32),
+            "green" => Ok(5_f32),
+            "blue" => Ok(6_f32),
+            "violet" => Ok(7_f32),
+            "grey" => Ok(8_f32),
+            "white" => Ok(9_f32),
+            "gold" => Ok(10_f32),
+            "silver" => Ok(11_f32),
+            _ => return Err("Invalid color !!"),
+            }
+        None => Err("Empty Color !!"),
+    }
+} 
+
+
+fn string_to_color (input: String) -> Result<Colors, &'static str> {
+    let v: Vec<Option<String>> = input.split_whitespace().map(|s| Some(s.to_string())).collect();
+    if v.len() == 4 {
+        Ok(Colors {
+            first_color: v[0].clone(),
+            sec_color: v[1].clone(),
+            third_color: None,
+            mult: v[2].clone(),
+            tolerance: v[3].clone(),
+        })
+    } else if  v.len () ==  5 {
+        Ok(Colors {
+            first_color: v[0].clone(),
+            sec_color: v[1].clone(),
+            third_color: v[2].clone(),
+            mult: v[3].clone(),
+            tolerance: v[4].clone(),
+        })
+    } else {
+        return Err("Not 4/5 rings color sequence !!");
+    }
+    
 }
 
 fn calc_resistor(i: Resistor) -> String {
-    /*let r= (i.first_digit as f64
-            +
-            i.sec_digit as f64
-            / 10. +
-            i.third_digit as f64
-            / 100.) *
-            i.mult as f64;*/
     let mut values= HashMap::new();
-    values.insert("first_digit", i.first_digit.unwrap_or(0) as f64);
-    values.insert("sec_digit", i.sec_digit.unwrap_or(0) as f64);
-    values.insert("third_digit", i.third_digit.unwrap_or(0) as f64);
+    values.insert("first_digit", i.first_digit.unwrap_or(0.) as f64);
+    values.insert("sec_digit", i.sec_digit.unwrap_or(0.) as f64);
+    values.insert("third_digit", i.third_digit.unwrap_or(0.) as f64);
     values.insert("mult", i.mult.unwrap_or(0_f32) as f64);
     values.insert("tolerance", i.tolerance.unwrap_or(0.0_f32) as f64);
 
@@ -152,18 +221,17 @@ fn exit_check(i:&str) -> Result<bool, &'static str> {
     }
 }
 
-fn main() {
+fn main () {
     banner();
     println!("This software converts your resistor color code in Ohms,\nUse english colors, with spaces. This is case insensitive.\nType \"exit\" to quit");
 
     'input: loop {
-    
+
         println!("Input your colors or exit:");
         let mut user_input = String::new();
-        io::stdin()
-            .read_line(&mut user_input)
-            .expect("failed");
-
+            io::stdin()
+                .read_line(&mut user_input)
+                .expect("failed");
         match exit_check(&user_input) {
             Ok(b) =>
                 if b == true {
@@ -171,17 +239,24 @@ fn main() {
                 },
             Err(e) => panic!("{}",e),
         }
-    
-        let resistor = colors_to_values(user_input);
-        match resistor {
-            Ok(r) => println!("{}", calc_resistor(r)),
-            Err(e) => {
-                println!("{}", e);
-                continue},
-        }
-    
-    }
 
+        let colors_input;
+        match string_to_color(user_input) {
+            Ok(r) => colors_input = r,
+            Err(e) => {println!("{}",e);
+                    continue;
+            },
+        }
+        let resistor;
+        match colors_input.to_values() {
+            Ok(v) => resistor = v,
+            Err(e) => {println!("{}",e);
+                    continue;
+            },
+        }
+
+        println!("{}",calc_resistor(resistor.set_mult().unwrap().set_tolerance().unwrap()));
+    }
 }
 
 fn banner() {
