@@ -9,29 +9,53 @@ pub fn get_user_input() -> String {
     user_input
 }
 
-fn get_color<T>(i: T) -> String
+fn get_color_units<'a, T>(i: T) -> Result<String, &'static str>
 where
-    T: PartialOrd + From<i32> + Copy,
-{
-    let color  = match i {
-        1 => "brown",
-        2 => "red",
-        3 => "orange",
-        4 => "yellow",
-        5 => "green",
-        6 => "blue",
-        7 => "purple",
-        8 => "grey",
-        9 => "white",
+    T: PartialOrd + Copy + Into<f32>,
+{   let index: f32 = i.try_into().unwrap();
+    let color;
+    match index {
+        0_f32 => color = "black",
+        1_f32 => color = "brown",
+        2_f32 => color = "red",
+        3_f32 => color = "orange",
+        4_f32 => color = "yellow",
+        5_f32 => color = "green",
+        6_f32 => color = "blue",
+        7_f32 => color = "purple",
+        8_f32 => color = "grey",
+        9_f32 => color = "white",
+        _ => return Err("Invalid Multiplier !!!!")
     };
-    color.to_string()
+    Ok(color.to_string())
 }
-struct Resistor {
-    first_digit: Option<f32>,
-    sec_digit: Option<f32>,
-    third_digit: Option<f32>,
-    mult: Option<f32>,
-    tolerance: Option<f32>,
+
+fn get_color_mult<'a, T>(i: T) -> Result<String, &'static str>
+where
+    T: PartialOrd + Copy + Into<f32>,
+{   let index: f32 = i.try_into().unwrap();
+    let color; 
+    match index as f32 {
+        0_f32 => color = "black",
+        1e1 => color = "brown",
+        1e2=> color = "red",
+        1e3 => color = "orange",
+        1e4 => color = "yellow",
+        1e5 => color = "green",
+        1e6 => color = "blue",
+        1e7 => color = "purple",
+        0.1 => color = "silver",
+        0.01 => color = "gold",
+        _ => return Err("Invalid Multiplier !!!!")
+    };
+    Ok(color.to_string())
+}
+pub struct Resistor {
+    pub first_digit: Option<f32>,
+    pub sec_digit: Option<f32>,
+    pub third_digit: Option<f32>,
+    pub mult: Option<f32>,
+    pub tolerance: Option<f32>,
 }
 
 impl Resistor {
@@ -43,25 +67,35 @@ impl Resistor {
         &self.tolerance]
     }
 
-    pub fn to_colors (&self) -> Option<Colors> {
-        let colors: Colors; 
-
-        colors.first_color = match &self.first_digit {
-            1 => "brown",
-            2 => "red",
-            3 => "orange",
-            4 => "yellow",
-            5 => "green",
-            6 => "blue",
-            7 => "purple",
-            8 => "grey",
-            9 => "white",
+    pub fn to_colors(self) -> Result<Colors, &'static str> {
+        let output = Colors {
+            first_color : match self.first_digit { 
+                Some(x) => Some(match get_color_units(x) {
+                    Ok(r) => r, 
+                    Err(e) => return Err(e)}), 
+                None => None },
+            sec_color : match self.sec_digit { 
+                Some(x) => Some(match get_color_units(x) {
+                    Ok(r) => r, 
+                    Err(e) => return Err(e)}), 
+                None => Some(get_color_units(0_f32).unwrap())},
+            third_color : match self.third_digit { 
+                Some(x) => Some(match get_color_units(x) {
+                    Ok(r) => r, 
+                    Err(e) => return Err(e)}), 
+                None => None },
+            mult : match self.mult { 
+                Some(x) => Some(match get_color_mult(x) {
+                    Ok(r) => r, 
+                    Err(e) => return Err(e)}), 
+                None => None },
+            tolerance : None,
         };
-                                    .collect();
-        Some(colors)
+        Ok(output)
+
     }
 
-    pub fn set_mult (self) -> Result<Resistor, &'static str> {
+    pub fn set_mult_for_colors (self) -> Result<Resistor, &'static str> {
         let m = match self.mult {
             None => None,
             Some(m) => if m <= 7_f32{
@@ -85,7 +119,7 @@ impl Resistor {
         )
     }
 
-    pub fn set_tolerance (self) -> Result<Resistor, &'static str> {
+    pub fn set_tolerance_for_colors (self) -> Result<Resistor, &'static str> {
         let t = match self.tolerance {
             None => None,
             Some(c) => Some(match c as i32 {
@@ -108,12 +142,13 @@ impl Resistor {
     }
 }
 
+
 pub struct Colors {
-    first_color: Option<String>,
-    sec_color: Option<String>,
-    third_color: Option<String>,
-    mult: Option<String>,
-    tolerance: Option<String>,
+    pub first_color: Option<String>,
+    pub sec_color: Option<String>,
+    pub third_color: Option<String>,
+    pub mult: Option<String>,
+    pub tolerance: Option<String>,
 }
 
 impl Colors {
@@ -174,7 +209,6 @@ pub fn color_to_values(i:&Option<String>) -> Result<f32, &str> {
         None => Err("Empty Color !!"),
     }
 } 
-
 
 pub fn string_to_color (input: String) -> Result<Colors, &'static str> {
     let v: Vec<Option<String>> = input.split_whitespace().map(|s| Some(s.to_string())).collect();
@@ -251,48 +285,89 @@ fn format_resistor(r: f64) -> Result<(f64, String), &'static str> {
     Ok(output)
 }
 
-
 pub fn string_to_values(input: String) -> Result<Resistor, &'static str> {
     let buf: Vec<String> = input.split_whitespace().map(|s| s.to_string()).collect();
-    if buf.len() >= 2 {
-        println!("Argument overflow !! Ignored");
+
+    if buf.len() >= 3 {
+        return Err("Argument overflow !! Ignored");
     }
     let value = &buf[0];
-    let unit = si_to_multiplier(&buf[1]);
-    let float_value = value.parse::<f64>().unwrap() * unit as f64;
-    let extracted_value = extract_mantissa_exponent_f64(float_value);
+    let unit;
+    if buf.len()>1 {
+        match si_to_multiplier(&buf[1]) {
+            Ok(m) => unit =  m,
+            Err(e) => return Err(e)
+        }
+    } else {
+        unit = 1_f32;
+    }
+
+    let float_value;
+    match value.replace(",", ".").parse::<f64>() {
+        Ok(v) => float_value = v * (unit as f64),
+        Err(_) => return Err("ParseIntError, Value Invalid !!")
+    }
+
+    if float_value.to_string()
+        .chars()
+        .filter(|&c| c != '.')
+        .collect::<String>()
+        .trim_end_matches("0")
+        .len()
+         > 3 {
+            return Err("Too many significant unit values !!");
+        }
+
+    let extracted_value = extract_mantissa_exponent_f64(&float_value);
     let vec_mantissa: Vec<u32> = extracted_value.0
                                     .to_string()
                                     .chars()
                                     .filter(|c| c.is_ascii_digit() == true)
                                     .map(|d| d.to_digit(10).unwrap())
                                     .collect();
-    
+
     let output = Resistor {
         first_digit: Some(vec_mantissa[0] as f32),
-        sec_digit: Some(vec_mantissa[1] as f32),
-        third_digit: if vec_mantissa.len() <= 4 { Some(vec_mantissa[2] as f32) } else { None },
+        sec_digit: if vec_mantissa.len() > 1  { Some(vec_mantissa[1] as f32) } else { None },
+        third_digit: if vec_mantissa.len() > 2 { Some(vec_mantissa[2] as f32) } else { None },
         mult: Some(extracted_value.1 as f32),
         tolerance: None,
     };
     Ok(output)
 }
 
-fn extract_mantissa_exponent_f64(value: f64) -> (u64, i32) {
-    let bits = value.to_bits();
-    let mantissa = bits & ((1u64 << 52) - 1);
-    let exponent = ((bits >> 52) & 0x7FF) as i32 - 1023;
-    (mantissa, exponent)
+fn extract_mantissa_exponent_f64(value: &f64) -> (u64, i32) {
+    let value_string = String::from(format!("{}", value));
+    let units = value_string
+        .chars()
+        .filter(|&c| c != '.')
+        .collect::<String>();
+
+    /*
+    let multiplier = value_string
+        .chars()
+        .filter(|&c| c != '.')
+        .filter(|&c| c == '0')
+        .count();
+    */
+    let mut units = units.trim_end_matches("0").parse::<u64>().unwrap();
+
+    //println!(" mult {}", multiplier);
+    if units < 10 { units = units * 10 }
+    let multiplier = (value / units as f64);
+
+    (units, multiplier as i32)
 }
 
-fn si_to_multiplier(si: &str) -> f32 {
+fn si_to_multiplier(si: &str) -> Result<f32, &'static str> {
     match si {
-        "n" => 0.000000001,
-        "µ" => 0.000001,
-        "m" => 0.001,
-        "k" => 1000_f32,
-        "M" => 1000000_f32,
-        "G" => 1000000000_f32,
+        "n" => Ok(1e-9),
+        "µ" => Ok(1e-6),
+        "m" => Ok(1e-3),
+        "k" | "K" => Ok(1e3),
+        "M" => Ok(1e6),
+        "G" => Ok(1e9),
+        _ => Err("SI Unit Invalid !!")
     }
 
 }
